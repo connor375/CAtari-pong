@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Classic Atari Pong</title>
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --text-color: #22ff22;
+            --dim-text: #007700;
+            --canvas-bg: #050b05;
+            --border-color: #22ff22;
+            --overlay-bg: rgba(5, 11, 5, 0.94);
+            --glow-shadow: 0 0 10px rgba(34, 255, 34, 0.5);
+            --touch-btn-bg: rgba(34, 255, 34, 0.15);
+            --touch-btn-active: rgba(34, 255, 34, 0.4);
+        }
+
+        [data-theme="amber"] {
+            --bg-color: #0d0d0d;
+            --text-color: #ffb000;
+            --dim-text: #885e00;
+            --canvas-bg: #0b0800;
+            --border-color: #ffb000;
+            --overlay-bg: rgba(11, 8, 0, 0.94);
+            --glow-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
+            --touch-btn-bg: rgba(255, 176, 0, 0.15);
+            --touch-btn-active: rgba(255, 176, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            text-shadow: var(--glow-shadow);
+            padding: 10px;
+        }
+
+        /* CRT scanline overlay */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+            font-size: 26px;
+            letter-spacing: 4px;
+        }
+
+        .header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            z-index: 200;
+        }
+
+        #instructions {
+            color: var(--dim-text);
+            font-size: 12px;
+            text-align: center;
+            text-shadow: none;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+
+        .action-btn {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px;
+            font-family: monospace;
+            cursor: pointer;
+            font-size: 11px;
+            box-shadow: var(--glow-shadow);
+        }
+
+        .action-btn:hover, .action-btn:active {
+            background: var(--border-color);
+            color: #000;
+            text-shadow: none;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 8 / 5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border: 3px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            box-shadow: var(--glow-shadow);
+            z-index: 1;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--overlay-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid var(--border-color);
+            box-shadow: var(--glow-shadow);
+            z-index: 10;
+            padding: 15px;
+        }
+
+        .menu-title {
+            font-size: 32px;
+            margin-bottom: 15px;
+            letter-spacing: 4px;
+            text-align: center;
+        }
+
+        .btn {
+            background: transparent;
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            padding: 10px 20px;
+            font-family: monospace;
+            font-size: 15px;
+            cursor: pointer;
+            margin: 6px;
+            width: 220px;
+            box-shadow: var(--glow-shadow);
+            z-index: 20;
+        }
+
+        .btn:hover, .btn:active {
+            background-color: var(--border-color);
+            color: #000;
+            text-shadow: none;
+        }
+
+        .instruction-box {
+            border: 1px dashed var(--border-color);
+            padding: 12px;
+            margin: 10px 0;
+            text-align: left;
+            width: 90%;
+            line-height: 1.6;
+            font-size: 12px;
+            color: var(--text-color);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .instruction-box ul {
+            list-style-type: square;
+            margin-left: 18px;
+        }
+
+        /* Mobile Touch Controls Overlay */
+        .touch-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .touch-side {
+            width: 20%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px 5px;
+            pointer-events: auto;
+        }
+
+        .touch-btn {
+            flex: 1;
+            background: var(--touch-btn-bg);
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: var(--glow-shadow);
+            border-radius: 4px;
+            opacity: 0.8;
+        }
+
+        .touch-btn:active, .touch-btn.active {
+            background: var(--touch-btn-active);
+            opacity: 1;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body data-theme="green">
+
+    <h1>PONG</h1>
+    <div class="header-controls">
+        <p id="instructions">Select a game mode to start playing!</p>
+        <button id="pauseTrigger" class="action-btn hidden" onclick="togglePause()">PAUSE (P)</button>
+        <button id="inputToggle" class="action-btn" onclick="toggleInputMode()">INPUT: DESKTOP</button>
+        <button id="soundToggle" class="action-btn" onclick="toggleSound()">SOUND: ON</button>
+        <button id="themeToggle" class="action-btn" onclick="toggleTheme()">CRT: GREEN</button>
+    </div>
+    
+    <div class="container">
+        <!-- Start Menu -->
+        <div id="menu" class="overlay">
+            <div class="menu-title">GAME MODE</div>
+            <button class="btn" onclick="startGame(1)">1 PLAYER</button>
+            <button class="btn" onclick="startGame(2)">2 PLAYERS</button>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pauseMenu" class="overlay hidden">
+            <div class="menu-title" id="pauseTitle">GAME PAUSED</div>
+            <div class="instruction-box">
+                <strong>CONTROLS:</strong>
+                <ul id="pauseControlDetails">
+                    <!-- Dynamic details load here -->
+                </ul>
+                <br>
+                <strong>GAME RULES:</strong>
+                <ul>
+                    <li>Deflect the ball past your opponent's paddle to score.</li>
+                    <li>Hitting the ball near paddle edges increases bounce angle.</li>
+                    <li>Ball speed increases with each successful volley!</li>
+                </ul>
+            </div>
+            <button class="btn" onclick="togglePause()">START / RESUME</button>
+            <button class="btn" onclick="toggleInputMode()" id="pauseInputBtn">INPUT: DESKTOP</button>
+            <button class="btn" onclick="toggleSound()" id="pauseSoundBtn">SOUND: ON</button>
+            <button class="btn" onclick="resetToMenu()">MAIN MENU</button>
+        </div>
+        
+        <!-- On-Screen Touch Controls -->
+        <div id="touchControls" class="touch-controls hidden">
+            <!-- Left Paddle Controls -->
+            <div class="touch-side" id="leftTouchSide">
+                <div class="touch-btn" id="btnLeftUp">▲ UP</div>
+                <div class="touch-btn" id="btnLeftDown">▼ DN</div>
+            </div>
+            <!-- Right Paddle Controls (Multiplayer) -->
+            <div class="touch-side" id="rightTouchSide">
+                <div class="touch-btn" id="btnRightUp">▲ UP</div>
+                <div class="touch-btn" id="btnRightDown">▼ DN</div>
+            </div>
+        </div>
+
+        <canvas id="pongCanvas" width="800" height="500"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("pongCanvas");
+        const ctx = canvas.getContext("2d");
+        const menu = document.getElementById("menu");
+        const pauseMenu = document.getElementById("pauseMenu");
+        const pauseTrigger = document.getElementById("pauseTrigger");
+        const pauseTitle = document.getElementById("pauseTitle");
+        const themeToggle = document.getElementById("themeToggle");
+        const soundToggle = document.getElementById("soundToggle");
+        const inputToggle = document.getElementById("inputToggle");
+        const pauseInputBtn = document.getElementById("pauseInputBtn");
+        const pauseSoundBtn = document.getElementById("pauseSoundBtn");
+        const instructions = document.getElementById("instructions");
+        const pauseControlDetails = document.getElementById("pauseControlDetails");
+        const touchControls = document.getElementById("touchControls");
+        const rightTouchSide = document.getElementById("rightTouchSide");
+
+        // Web Audio Setup
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function ensureAudioUnlocked() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) audioCtx = new AudioContextClass();
+            }
+            if (audioCtx && audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+        }
+
+        window.addEventListener("click", ensureAudioUnlocked, { once: true });
+        window.addEventListener("touchstart", ensureAudioUnlocked, { once: true });
+        window.addEventListener("keydown", ensureAudioUnlocked, { once: true });
+
+        function playSound(freq, duration, type = "square") {
+            if (!soundEnabled) return;
+            ensureAudioUnlocked();
+            if (!audioCtx) return;
+
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = type;
+                osc.frequency.value = freq;
+
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.warn("Audio error:", e);
+            }
+        }
+
+        function playPaddleHitSound() { playSound(480, 0.08); }
+        function playWallHitSound() { playSound(240, 0.06); }
+        function playScoreSound() {
+            if (!soundEnabled) return;
+            playSound(300, 0.1);
+            setTimeout(() => playSound(450, 0.1), 100);
+            setTimeout(() => playSound(600, 0.15), 200);
+        }
+
+        function toggleSound() {
+            ensureAudioUnlocked();
+            soundEnabled = !soundEnabled;
+            const text = soundEnabled ? "SOUND: ON" : "SOUND: OFF";
+            soundToggle.innerText = text;
+            pauseSoundBtn.innerText = text;
+
+            if (soundEnabled) playSound(520, 0.08);
+        }
+
+        // Input Mode Management (Desktop vs Mobile Touch)
+        let isMobileInput = false;
+
+        function detectTouchDevice() {
+            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 768);
+        }
+
+        function setInputMode(mobile) {
+            isMobileInput = mobile;
+            const text = isMobileInput ? "INPUT: MOBILE" : "INPUT: DESKTOP";
+            inputToggle.innerText = text;
+            pauseInputBtn.innerText = text;
+            updateControlsDisplay();
+        }
+
+        function toggleInputMode() {
+            setInputMode(!isMobileInput);
+        }
+
+        // Retro Theme Management
+        let currentTheme = "green";
+
+        function toggleTheme() {
+            currentTheme = currentTheme === "green" ? "amber" : "green";
+            document.body.setAttribute("data-theme", currentTheme);
+            themeToggle.innerText = currentTheme === "green" ? "CRT: GREEN" : "CRT: AMBER";
+        }
+
+        function getThemeColors() {
+            return currentTheme === "green" 
+                ? { bg: "#050b05", fg: "#22ff22" } 
+                : { bg: "#0b0800", fg: "#ffb000" };
+        }
+
+        // Game Configuration
+        const paddleWidth = 10;
+        const paddleHeight = 80;
+        const ballRadius = 7;
+        const initialBallSpeed = 5;
+        const speedIncrement = 0.5;
+
+        // Game State
+        let playerScore = 0;
+        let aiScore = 0;
+        let gameMode = 1;
+        let gameRunning = false;
+        let isPaused = false;
+
+        // Left Paddle
+        const playerLeft = {
+            x: 20,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            speed: 7
+        };
+
+        // Right Paddle
+        const playerRight = {
+            x: canvas.width - 20 - paddleWidth,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            speed: 7
+        };
+
+        // Ball object
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: ballRadius,
+            speed: initialBallSpeed,
+            velocityX: initialBallSpeed,
+            velocityY: initialBallSpeed
+        };
+
+        // Controls State Tracker
+        const inputs = {
+            leftUp: false,
+            leftDown: false,
+            rightUp: false,
+            rightDown: false
+        };
+
+        // Keyboard Event Listeners
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "w" || event.key === "W") inputs.leftUp = true;
+            if (event.key === "s" || event.key === "S") inputs.leftDown = true;
+            if (event.key === "ArrowUp") inputs.rightUp = true;
+            if (event.key === "ArrowDown") inputs.rightDown = true;
+            
+            if ((event.key === "p" || event.key === "P" || event.key === " ") && gameRunning) {
+                togglePause();
+            }
+
+            if (event.key === "Escape" && isPaused) {
+                resetToMenu();
+            }
+
+            if (["ArrowUp", "ArrowDown", "w", "s", "W", "S", " "].includes(event.key)) {
+                event.preventDefault();
+            }
+        });
+
+        window.addEventListener("keyup", (event) => {
+            if (event.key === "w" || event.key === "W") inputs.leftUp = false;
+            if (event.key === "s" || event.key === "S") inputs.leftDown = false;
+            if (event.key === "ArrowUp") inputs.rightUp = false;
+            if (event.key === "ArrowDown") inputs.rightDown = false;
+        });
+
+        // Mobile Touch Button Setup
+        function setupTouchButton(elementId, inputKey) {
+            const btn = document.getElementById(elementId);
+            
+            const startHandler = (e) => {
+                e.preventDefault();
+                ensureAudioUnlocked();
+                inputs[inputKey] = true;
+                btn.classList.add("active");
+            };
+
+            const endHandler = (e) => {
+                e.preventDefault();
+                inputs[inputKey] = false;
+                btn.classList.remove("active");
+            };
+
+            btn.addEventListener("touchstart", startHandler, { passive: false });
+            btn.addEventListener("touchend", endHandler, { passive: false });
+            btn.addEventListener("mousedown", startHandler);
+            btn.addEventListener("mouseup", endHandler);
+            btn.addEventListener("mouseleave", endHandler);
+        }
+
+        setupTouchButton("btnLeftUp", "leftUp");
+        setupTouchButton("btnLeftDown", "leftDown");
+        setupTouchButton("btnRightUp", "rightUp");
+        setupTouchButton("btnRightDown", "rightDown");
+
+        function updateControlsDisplay() {
+            if (!gameRunning) return;
+
+            if (isMobileInput) {
+                touchControls.classList.remove("hidden");
+                if (gameMode === 1) {
+                    rightTouchSide.classList.add("hidden");
+                    instructions.innerHTML = "Left Controls: Touch Screen Buttons &nbsp;|&nbsp; Right: Computer AI";
+                    pauseControlDetails.innerHTML = `
+                        <li><strong>Input Mode:</strong> Mobile Touch Overlay</li>
+                        <li><strong>Left Player:</strong> Use Left ▲/▼ Screen Buttons</li>
+                        <li><strong>Right Player:</strong> Controlled by Computer AI</li>
+                    `;
+                } else {
+                    rightTouchSide.classList.remove("hidden");
+                    instructions.innerHTML = "P1: Touch Left Buttons &nbsp;|&nbsp; P2: Touch Right Buttons";
+                    pauseControlDetails.innerHTML = `
+                        <li><strong>Input Mode:</strong> Mobile Touch Overlay</li>
+                        <li><strong>Player 1:</strong> Touch Left Screen Buttons</li>
+                        <li><strong>Player 2:</strong> Touch Right Screen Buttons</li>
+                    `;
+                }
+            } else {
+                touchControls.classList.add("hidden");
+                if (gameMode === 1) {
+                    instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: AI Bot";
+                    pauseControlDetails.innerHTML = `
+                        <li><strong>Input Mode:</strong> Desktop Keyboard</li>
+                        <li><strong>Left Player:</strong> Press 'W' (Up) and 'S' (Down)</li>
+                        <li><strong>Right Player:</strong> Controlled by Computer AI</li>
+                    `;
+                } else {
+                    instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: UP / DOWN Arrows";
+                    pauseControlDetails.innerHTML = `
+                        <li><strong>Input Mode:</strong> Desktop Keyboard</li>
+                        <li><strong>Left Player:</strong> Press 'W' (Up) and 'S' (Down)</li>
+                        <li><strong>Right Player:</strong> Press UP and DOWN Arrow keys</li>
+                    `;
+                }
+            }
+        }
+
+        function startGame(mode) {
+            ensureAudioUnlocked();
+            gameMode = mode;
+            gameRunning = true;
+            
+            menu.classList.add("hidden");
+            pauseTrigger.classList.remove("hidden");
+            
+            updateControlsDisplay();
+
+            playerScore = 0;
+            aiScore = 0;
+            resetBall();
+
+            isPaused = true;
+            pauseTitle.innerText = "READY TO PLAY";
+            pauseMenu.classList.remove("hidden");
+            pauseTrigger.innerText = "START (SPACE)";
+        }
+
+        function togglePause() {
+            ensureAudioUnlocked();
+            if (!gameRunning) return;
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                pauseTitle.innerText = "GAME PAUSED";
+                pauseMenu.classList.remove("hidden");
+                pauseTrigger.innerText = "RESUME (P)";
+            } else {
+                pauseMenu.classList.add("hidden");
+                pauseTrigger.innerText = "PAUSE (P)";
+            }
+        }
+
+        function resetToMenu() {
+            gameRunning = false;
+            isPaused = false;
+            pauseMenu.classList.add("hidden");
+            touchControls.classList.add("hidden");
+            menu.classList.remove("hidden");
+            pauseTrigger.classList.add("hidden");
+            instructions.innerHTML = "Select a game mode to start playing!";
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speed = initialBallSpeed;
+            ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
+            ball.velocityY = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
+        }
+
+        function collision(b, p) {
+            return b.x + b.radius > p.x && 
+                   b.x - b.radius < p.x + p.width && 
+                   b.y + b.radius > p.y && 
+                   b.y - b.radius < p.y + p.height;
+        }
+
+        function drawRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function drawCircle(x, y, r, color) {
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2, false);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawNet(color) {
+            for (let i = 0; i <= canvas.height; i += 30) {
+                drawRect(canvas.width / 2 - 2, i, 4, 15, color);
+            }
+        }
+
+        function drawText(text, x, y, color) {
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.font = "60px monospace";
+            ctx.fillText(text, x, y);
+        }
+
+        function update() {
+            if (!gameRunning || isPaused) return;
+
+            // Left Paddle movement
+            if (inputs.leftUp) playerLeft.y -= playerLeft.speed;
+            if (inputs.leftDown) playerLeft.y += playerLeft.speed;
+
+            // Right Paddle movement
+            if (gameMode === 2) {
+                if (inputs.rightUp) playerRight.y -= playerRight.speed;
+                if (inputs.rightDown) playerRight.y += playerRight.speed;
+            } else {
+                let aiTarget = ball.y - playerRight.height / 2;
+                playerRight.y += (aiTarget - playerRight.y) * 0.08; 
+            }
+
+            // Screen boundary clamping
+            if (playerLeft.y < 0) playerLeft.y = 0;
+            if (playerLeft.y > canvas.height - playerLeft.height) playerLeft.y = canvas.height - playerLeft.height;
+            
+            if (playerRight.y < 0) playerRight.y = 0;
+            if (playerRight.y > canvas.height - playerRight.height) playerRight.y = canvas.height - playerRight.height;
+
+            ball.x += ball.velocityX;
+            ball.y += ball.velocityY;
+
+            // Wall Bounce
+            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
+                ball.velocityY = -ball.velocityY;
+                playWallHitSound();
+            }
+
+            let activePaddle = (ball.x < canvas.width / 2) ? playerLeft : playerRight;
+
+            if (collision(ball, activePaddle)) {
+                let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2));
+                collidePoint = collidePoint / (activePaddle.height / 2);
+
+                let angleRad = (Math.PI / 4) * collidePoint;
+                let direction = (ball.x < canvas.width / 2) ? 1 : -1;
+
+                ball.speed += speedIncrement;
+                ball.velocityX = direction * ball.speed * Math.cos(angleRad);
+                ball.velocityY = ball.speed * Math.sin(angleRad);
+                playPaddleHitSound();
+            }
+
+            // Scoring
+            if (ball.x - ball.radius < 0) {
+                aiScore++;
+                playScoreSound();
+                resetBall();
+            } else if (ball.x + ball.radius > canvas.width) {
+                playerScore++;
+                playScoreSound();
+                resetBall();
+            }
+        }
+
+        function render() {
+            const colors = getThemeColors();
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawNet(colors.fg);
+            drawText(playerScore, canvas.width / 4, 80, colors.fg);
+            drawText(aiScore, 3 * canvas.width / 4 - 35, 80, colors.fg);
+            drawRect(playerLeft.x, playerLeft.y, playerLeft.width, playerLeft.height, colors.fg);
+            drawRect(playerRight.x, playerRight.y, playerRight.width, playerRight.height, colors.fg);
+            drawCircle(ball.x, ball.y, ball.radius, colors.fg);
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize default input mode based on screen size/device type
+        if (detectTouchDevice()) {
+            setInputMode(true);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
