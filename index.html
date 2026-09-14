@@ -351,22 +351,23 @@
             }
         }
 
-        function playSliceSound() {
+        function playBeamSound() {
             if (!soundEnabled) return;
             ensureAudioUnlocked();
             if (!audioCtx) return;
             try {
+                // Rising pitch charging beam sound
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = "sawtooth";
-                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
+                osc.stop(audioCtx.currentTime + 0.5);
             } catch (e) {}
         }
 
@@ -460,16 +461,15 @@
             speed: initialBallSpeed,
             velocityX: initialBallSpeed,
             velocityY: initialBallSpeed,
-            sliced: false
+            destroyed: false
         };
 
-        // Samurai Animation State
-        let samuraiAnimation = null;
-        let slicedBallHalves = [];
+        // Goku Animation State
+        let gokuAnimation = null;
 
-        // Secret Word Detection ("ninja")
+        // Secret Word Detection ("goku")
         let typedBuffer = "";
-        const secretCode = "ninja";
+        const secretCode = "goku";
 
         // Controls State Tracker
         const inputs = {
@@ -500,7 +500,7 @@
                 if (typedBuffer.length > 10) typedBuffer = typedBuffer.slice(-10);
 
                 if (typedBuffer.endsWith(secretCode)) {
-                    triggerSamurai();
+                    triggerGoku();
                     typedBuffer = "";
                 }
             }
@@ -517,35 +517,28 @@
             if (event.key === "ArrowDown") inputs.rightDown = false;
         });
 
-        function triggerSamurai() {
-            if (samuraiAnimation || ball.sliced) return;
+        function triggerGoku() {
+            if (gokuAnimation || ball.destroyed) return;
 
-            ball.sliced = true;
-            playSliceSound();
+            ball.destroyed = true;
+            playBeamSound();
 
-            // Create Samurai Dash Animation
-            samuraiAnimation = {
-                x: -50,
+            // Goku charging and beam sequence
+            gokuAnimation = {
+                x: 60,
                 y: ball.y,
-                targetX: canvas.width + 50,
-                progress: 0,
-                slashAlpha: 1.0
+                beamProgress: 0,
+                chargeTimer: 0
             };
-
-            // Split the ball into 2 separate flying halves
-            slicedBallHalves = [
-                { x: ball.x, y: ball.y - 2, vx: -3, vy: -6, angle: 0 },
-                { x: ball.x, y: ball.y + 2, vx: 3, vy: 6, angle: 0 }
-            ];
 
             // Award 1 point to Player 1
             playerScore++;
-            instructions.innerHTML = "★ SAMURAI SLICED THE BALL! +1 POINT TO P1 ★";
+            instructions.innerHTML = "★ GOKU INCINERATED THE BALL WITH KAMEHAMEHA! +1 POINT TO P1 ★";
 
             setTimeout(() => {
                 resetBall();
                 if (gameRunning) updateControlsDisplay();
-            }, 1200);
+            }, 1400);
         }
 
         // Mobile Touch Button Setup
@@ -610,7 +603,7 @@
                     pauseControlDetails.innerHTML = `
                         <li><strong>Input Mode:</strong> Desktop Keyboard</li>
                         <li><strong>Left Player:</strong> Press 'W' (Up) and 'S' (Down)</li>
-                        <li><strong>Right Player:</strong> Press UP and DOWN Arrow keys</li>
+                        <li><strong>Player 2:</strong> Press UP and DOWN Arrow keys</li>
                     `;
                 }
             }
@@ -654,8 +647,7 @@
         function resetToMenu() {
             gameRunning = false;
             isPaused = false;
-            samuraiAnimation = null;
-            slicedBallHalves = [];
+            gokuAnimation = null;
             pauseMenu.classList.add("hidden");
             touchControls.classList.add("hidden");
             menu.classList.remove("hidden");
@@ -669,8 +661,7 @@
             ball.speed = initialBallSpeed;
             ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
             ball.velocityY = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
-            ball.sliced = false;
-            slicedBallHalves = [];
+            ball.destroyed = false;
         }
 
         function collision(b, p) {
@@ -711,60 +702,54 @@
             ctx.fillText(text, x, y);
         }
 
-        function drawSamuraiAndSlash(colors) {
-            if (!samuraiAnimation) return;
+        function drawGokuAndBeam() {
+            if (!gokuAnimation) return;
 
-            samuraiAnimation.progress += 0.08;
-            const samX = -50 + (canvas.width + 100) * samuraiAnimation.progress;
+            gokuAnimation.beamProgress += 0.08;
+            const gkX = gokuAnimation.x;
+            const gkY = gokuAnimation.y;
 
-            // Draw Sword Slash Line across canvas
-            ctx.strokeStyle = "#ffffff";
-            ctx.shadowColor = colors.fg;
+            // 1. Draw Goku Pixel Art
+            // Spiky Goku Hair (Black)
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(gkX - 12, gkY - 30, 24, 12);
+            ctx.fillRect(gkX - 18, gkY - 24, 10, 10);
+            ctx.fillRect(gkX + 8, gkY - 24, 10, 10);
+
+            // Goku Face / Skin
+            ctx.fillStyle = "#ffcc99";
+            ctx.fillRect(gkX - 10, gkY - 18, 20, 12);
+
+            // Goku Orange Martial Arts Gi & Blue Belt
+            ctx.fillStyle = "#ff6600";
+            ctx.fillRect(gkX - 12, gkY - 6, 24, 20);
+            ctx.fillStyle = "#0033cc";
+            ctx.fillRect(gkX - 12, gkY + 2, 24, 4);
+
+            // 2. Draw Blue Kamehameha Beam
+            const beamWidth = canvas.width * Math.min(1, gokuAnimation.beamProgress * 1.5);
+
+            // Outer Blue Glow Beam
+            ctx.fillStyle = "#00bfff";
+            ctx.shadowColor = "#00bfff";
+            ctx.shadowBlur = 25;
+            ctx.fillRect(gkX + 12, gkY - 16, beamWidth, 32);
+
+            // Inner Intense White Beam Core
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "#ffffff";
             ctx.shadowBlur = 15;
-            ctx.lineWidth = 4;
+            ctx.fillRect(gkX + 12, gkY - 8, beamWidth, 16);
+
+            // Energy Charging Sphere at Goku's hands
             ctx.beginPath();
-            ctx.moveTo(0, ball.y - 40);
-            ctx.lineTo(canvas.width, ball.y + 40);
-            ctx.stroke();
+            ctx.arc(gkX + 14, gkY, 18, 0, Math.PI * 2);
+            ctx.fillStyle = "#00ffff";
+            ctx.fill();
 
-            // Draw Pixel Samurai Figure
-            ctx.fillStyle = colors.fg;
-            ctx.shadowColor = colors.fg;
-            ctx.shadowBlur = 10;
-
-            // Head & Ribbon
-            ctx.fillRect(samX - 10, ball.y - 25, 20, 15);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(samX - 12, ball.y - 22, 24, 4);
-
-            // Body
-            ctx.fillStyle = colors.fg;
-            ctx.fillRect(samX - 12, ball.y - 10, 24, 25);
-
-            // Katana Blade
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(samX + 10, ball.y - 18, 30, 4);
-
-            if (samuraiAnimation.progress >= 1) {
-                samuraiAnimation = null;
+            if (gokuAnimation.beamProgress >= 1.2) {
+                gokuAnimation = null;
             }
-        }
-
-        function drawSlicedBallHalves(colors) {
-            if (slicedBallHalves.length === 0) return;
-
-            slicedBallHalves.forEach(half => {
-                half.x += half.vx;
-                half.y += half.vy;
-
-                ctx.fillStyle = colors.fg;
-                ctx.shadowColor = colors.fg;
-                ctx.shadowBlur = 10;
-                ctx.beginPath();
-                ctx.arc(half.x, half.y, ball.radius, 0, Math.PI, half.vy > 0);
-                ctx.closePath();
-                ctx.fill();
-            });
         }
 
         function update() {
@@ -790,7 +775,7 @@
             if (playerRight.y < 0) playerRight.y = 0;
             if (playerRight.y > canvas.height - playerRight.height) playerRight.y = canvas.height - playerRight.height;
 
-            if (!ball.sliced) {
+            if (!ball.destroyed) {
                 ball.x += ball.velocityX;
                 ball.y += ball.velocityY;
 
@@ -841,13 +826,11 @@
             drawRect(playerLeft.x, playerLeft.y, playerLeft.width, playerLeft.height, colors.fg);
             drawRect(playerRight.x, playerRight.y, playerRight.width, playerRight.height, colors.fg);
 
-            if (!ball.sliced) {
+            if (!ball.destroyed) {
                 drawCircle(ball.x, ball.y, ball.radius, colors.fg);
-            } else {
-                drawSlicedBallHalves(colors);
             }
 
-            drawSamuraiAndSlash(colors);
+            drawGokuAndBeam();
         }
 
         function gameLoop() {
