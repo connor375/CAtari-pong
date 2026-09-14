@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Classic Atari Pong - CAtari Studios</title>
-    <!-- CAtari Studios Custom Favicon (Capital white C) -->
+    <!-- CAtari Studios Custom Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black' rx='20'/><text x='50%' y='55%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='900' font-size='70'>C</text></svg>">
     <style>
         :root {
@@ -351,23 +351,23 @@
             }
         }
 
-        function playBeamSound() {
+        function playKamehamehaSound() {
             if (!soundEnabled) return;
             ensureAudioUnlocked();
             if (!audioCtx) return;
             try {
-                // Rising pitch charging beam sound
+                // Charge up tone
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = "sine";
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
+                osc.type = "sawtooth";
+                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 1.2);
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.5);
+                osc.stop(audioCtx.currentTime + 1.2);
             } catch (e) {}
         }
 
@@ -461,11 +461,12 @@
             speed: initialBallSpeed,
             velocityX: initialBallSpeed,
             velocityY: initialBallSpeed,
-            destroyed: false
+            disintegrating: false
         };
 
-        // Goku Animation State
-        let gokuAnimation = null;
+        // Goku Animation & Disintegration Particles State
+        let gokuSequence = null;
+        let ashParticles = [];
 
         // Secret Word Detection ("goku")
         let typedBuffer = "";
@@ -518,27 +519,39 @@
         });
 
         function triggerGoku() {
-            if (gokuAnimation || ball.destroyed) return;
+            if (gokuSequence || ball.disintegrating) return;
 
-            ball.destroyed = true;
-            playBeamSound();
+            ball.disintegrating = true;
+            playKamehamehaSound();
 
-            // Goku charging and beam sequence
-            gokuAnimation = {
-                x: 60,
-                y: ball.y,
-                beamProgress: 0,
-                chargeTimer: 0
+            gokuSequence = {
+                phase: "charge", // "charge" -> "beam" -> "done"
+                timer: 0,
+                gkY: ball.y
             };
 
-            // Award 1 point to Player 1
-            playerScore++;
-            instructions.innerHTML = "★ GOKU INCINERATED THE BALL WITH KAMEHAMEHA! +1 POINT TO P1 ★";
+            // Spawn disintegration particles from ball
+            ashParticles = [];
+            for (let i = 0; i < 35; i++) {
+                ashParticles.push({
+                    x: ball.x + (Math.random() - 0.5) * 12,
+                    y: ball.y + (Math.random() - 0.5) * 12,
+                    vx: (Math.random() + 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 4,
+                    size: Math.random() * 3 + 1,
+                    alpha: 1.0
+                });
+            }
 
+            playerScore++;
+            instructions.innerHTML = "★ SUPER SAIYAN GOKU FIRED KAMEHAMEHA! +1 POINT TO P1 ★";
+
+            // Total animation runtime gave ample visual disintegrating time
             setTimeout(() => {
                 resetBall();
+                gokuSequence = null;
                 if (gameRunning) updateControlsDisplay();
-            }, 1400);
+            }, 2400);
         }
 
         // Mobile Touch Button Setup
@@ -647,7 +660,8 @@
         function resetToMenu() {
             gameRunning = false;
             isPaused = false;
-            gokuAnimation = null;
+            gokuSequence = null;
+            ashParticles = [];
             pauseMenu.classList.add("hidden");
             touchControls.classList.add("hidden");
             menu.classList.remove("hidden");
@@ -661,7 +675,8 @@
             ball.speed = initialBallSpeed;
             ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
             ball.velocityY = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
-            ball.destroyed = false;
+            ball.disintegrating = false;
+            ashParticles = [];
         }
 
         function collision(b, p) {
@@ -702,53 +717,94 @@
             ctx.fillText(text, x, y);
         }
 
-        function drawGokuAndBeam() {
-            if (!gokuAnimation) return;
+        function drawGokuAndDisintegration() {
+            if (!gokuSequence) return;
 
-            gokuAnimation.beamProgress += 0.08;
-            const gkX = gokuAnimation.x;
-            const gkY = gokuAnimation.y;
+            gokuSequence.timer += 0.025;
+            const gkX = 65;
+            const gkY = gokuSequence.gkY;
 
-            // 1. Draw Goku Pixel Art
-            // Spiky Goku Hair (Black)
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(gkX - 12, gkY - 30, 24, 12);
-            ctx.fillRect(gkX - 18, gkY - 24, 10, 10);
-            ctx.fillRect(gkX + 8, gkY - 24, 10, 10);
-
-            // Goku Face / Skin
-            ctx.fillStyle = "#ffcc99";
-            ctx.fillRect(gkX - 10, gkY - 18, 20, 12);
-
-            // Goku Orange Martial Arts Gi & Blue Belt
-            ctx.fillStyle = "#ff6600";
-            ctx.fillRect(gkX - 12, gkY - 6, 24, 20);
-            ctx.fillStyle = "#0033cc";
-            ctx.fillRect(gkX - 12, gkY + 2, 24, 4);
-
-            // 2. Draw Blue Kamehameha Beam
-            const beamWidth = canvas.width * Math.min(1, gokuAnimation.beamProgress * 1.5);
-
-            // Outer Blue Glow Beam
-            ctx.fillStyle = "#00bfff";
-            ctx.shadowColor = "#00bfff";
-            ctx.shadowBlur = 25;
-            ctx.fillRect(gkX + 12, gkY - 16, beamWidth, 32);
-
-            // Inner Intense White Beam Core
-            ctx.fillStyle = "#ffffff";
-            ctx.shadowColor = "#ffffff";
-            ctx.shadowBlur = 15;
-            ctx.fillRect(gkX + 12, gkY - 8, beamWidth, 16);
-
-            // Energy Charging Sphere at Goku's hands
+            // --- DETAILED SUPER SAIYAN GOKU PIXEL ART ---
+            // Aura Glow
+            ctx.fillStyle = "rgba(255, 230, 0, 0.3)";
+            ctx.shadowColor = "#ffea00";
+            ctx.shadowBlur = 20;
             ctx.beginPath();
-            ctx.arc(gkX + 14, gkY, 18, 0, Math.PI * 2);
-            ctx.fillStyle = "#00ffff";
+            ctx.arc(gkX, gkY, 35, 0, Math.PI * 2);
             ctx.fill();
 
-            if (gokuAnimation.beamProgress >= 1.2) {
-                gokuAnimation = null;
+            // Spiky Yellow Super Saiyan Hair
+            ctx.fillStyle = "#ffe600";
+            ctx.shadowColor = "#ffea00";
+            ctx.shadowBlur = 12;
+            ctx.fillRect(gkX - 16, gkY - 38, 32, 16);
+            ctx.fillRect(gkX - 22, gkY - 30, 12, 14);
+            ctx.fillRect(gkX + 10, gkY - 30, 12, 14);
+            ctx.fillRect(gkX - 8, gkY - 44, 16, 10);
+
+            // Skin / Face
+            ctx.fillStyle = "#ffcc99";
+            ctx.shadowBlur = 0;
+            ctx.fillRect(gkX - 12, gkY - 22, 24, 14);
+
+            // Orange Gi Body & Blue Undershirt
+            ctx.fillStyle = "#ff5500";
+            ctx.fillRect(gkX - 16, gkY - 8, 32, 26);
+            ctx.fillStyle = "#0022cc";
+            ctx.fillRect(gkX - 8, gkY - 8, 16, 12); // Blue chest
+            ctx.fillRect(gkX - 16, gkY + 4, 32, 5);  // Blue belt
+
+            // Hands charging Kamehameha
+            ctx.fillStyle = "#ffcc99";
+            ctx.fillRect(gkX + 16, gkY - 4, 10, 10);
+
+            // --- PHASE 1: CHARGING ENERGY ---
+            if (gokuSequence.timer < 0.4) {
+                // Blue Sphere Charging at hands
+                let chargeSize = (gokuSequence.timer / 0.4) * 22;
+                ctx.fillStyle = "#00ffff";
+                ctx.shadowColor = "#00ffff";
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(gkX + 22, gkY, chargeSize, 0, Math.PI * 2);
+                ctx.fill();
+            } 
+            // --- PHASE 2: FIRING KAMEHAMEHA BEAM & DISINTEGRATING BALL ---
+            else {
+                // Full Screaming Blue Kamehameha Beam
+                const beamLength = canvas.width - gkX;
+
+                // Outer Blue Blast
+                ctx.fillStyle = "#00bfff";
+                ctx.shadowColor = "#00ffff";
+                ctx.shadowBlur = 25;
+                ctx.fillRect(gkX + 22, gkY - 24, beamLength, 48);
+
+                // Inner White Core Beam
+                ctx.fillStyle = "#ffffff";
+                ctx.shadowColor = "#ffffff";
+                ctx.shadowBlur = 15;
+                ctx.fillRect(gkX + 22, gkY - 12, beamLength, 24);
+
+                // Energy Burst Ball at Goku's Hands
+                ctx.beginPath();
+                ctx.arc(gkX + 22, gkY, 28, 0, Math.PI * 2);
+                ctx.fillStyle = "#00ffff";
+                ctx.fill();
+
+                // Draw Slow Disintegrating Ash & Pixel Particles
+                ashParticles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.015;
+
+                    if (p.alpha > 0) {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                        ctx.shadowColor = "#00ffff";
+                        ctx.shadowBlur = 10;
+                        ctx.fillRect(p.x, p.y, p.size, p.size);
+                    }
+                });
             }
         }
 
@@ -775,7 +831,7 @@
             if (playerRight.y < 0) playerRight.y = 0;
             if (playerRight.y > canvas.height - playerRight.height) playerRight.y = canvas.height - playerRight.height;
 
-            if (!ball.destroyed) {
+            if (!ball.disintegrating) {
                 ball.x += ball.velocityX;
                 ball.y += ball.velocityY;
 
@@ -826,11 +882,11 @@
             drawRect(playerLeft.x, playerLeft.y, playerLeft.width, playerLeft.height, colors.fg);
             drawRect(playerRight.x, playerRight.y, playerRight.width, playerRight.height, colors.fg);
 
-            if (!ball.destroyed) {
+            if (!ball.disintegrating) {
                 drawCircle(ball.x, ball.y, ball.radius, colors.fg);
             }
 
-            drawGokuAndBeam();
+            drawGokuAndDisintegration();
         }
 
         function gameLoop() {
