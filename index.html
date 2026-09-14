@@ -356,7 +356,6 @@
             ensureAudioUnlocked();
             if (!audioCtx) return;
             try {
-                // High frequency drop for sword slice sound
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = "sawtooth";
@@ -464,13 +463,13 @@
             sliced: false
         };
 
-        // Ninja Samurai Animation State
+        // Samurai Animation State
         let samuraiAnimation = null;
         let slicedBallHalves = [];
 
-        // Secret Typing Detection ("ninja sam")
+        // Secret Word Detection ("ninja")
         let typedBuffer = "";
-        const secretCode = "ninjasam";
+        const secretCode = "ninja";
 
         // Controls State Tracker
         const inputs = {
@@ -498,10 +497,10 @@
             // Secret Code Detection
             if (event.key.length === 1 && gameRunning && !isPaused) {
                 typedBuffer += event.key.toLowerCase();
-                if (typedBuffer.length > 20) typedBuffer = typedBuffer.slice(-20);
+                if (typedBuffer.length > 10) typedBuffer = typedBuffer.slice(-10);
 
-                if (typedBuffer.replace(/\s+/g, '').includes(secretCode)) {
-                    triggerNinjaSamurai();
+                if (typedBuffer.endsWith(secretCode)) {
+                    triggerSamurai();
                     typedBuffer = "";
                 }
             }
@@ -518,7 +517,7 @@
             if (event.key === "ArrowDown") inputs.rightDown = false;
         });
 
-        function triggerNinjaSamurai() {
+        function triggerSamurai() {
             if (samuraiAnimation || ball.sliced) return;
 
             ball.sliced = true;
@@ -541,7 +540,7 @@
 
             // Award 1 point to Player 1
             playerScore++;
-            instructions.innerHTML = "★ NINJA SAMURAI SLICED THE BALL! +1 POINT TO P1 ★";
+            instructions.innerHTML = "★ SAMURAI SLICED THE BALL! +1 POINT TO P1 ★";
 
             setTimeout(() => {
                 resetBall();
@@ -600,12 +599,11 @@
             } else {
                 touchControls.classList.add("hidden");
                 if (gameMode === 1) {
-                    instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: AI Bot (Type 'ninja sam' for secret)";
+                    instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: AI Bot";
                     pauseControlDetails.innerHTML = `
                         <li><strong>Input Mode:</strong> Desktop Keyboard</li>
                         <li><strong>Left Player:</strong> Press 'W' (Up) and 'S' (Down)</li>
                         <li><strong>Right Player:</strong> Controlled by Computer AI</li>
-                        <li><strong>Secret:</strong> Type 'ninja sam' during gameplay!</li>
                     `;
                 } else {
                     instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: UP / DOWN Arrows";
@@ -734,10 +732,10 @@
             ctx.shadowColor = colors.fg;
             ctx.shadowBlur = 10;
 
-            // Head & Ninja Bandana
+            // Head & Ribbon
             ctx.fillRect(samX - 10, ball.y - 25, 20, 15);
             ctx.fillStyle = "#ffffff";
-            ctx.fillRect(samX - 12, ball.y - 22, 24, 4); // Bandana ribbon
+            ctx.fillRect(samX - 12, ball.y - 22, 24, 4);
 
             // Body
             ctx.fillStyle = colors.fg;
