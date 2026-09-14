@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Classic Atari Pong</title>
+    <title>Classic Atari Pong - CAtari Studios</title>
+    <!-- CAtari Studios Custom Favicon (Capital white C) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black' rx='20'/><text x='50%' y='55%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='900' font-size='70'>C</text></svg>">
     <style>
         :root {
             --bg-color: #0d0d0d;
@@ -53,7 +55,6 @@
             padding: 10px;
         }
 
-        /* CRT scanline overlay */
         body::before {
             content: " ";
             display: block;
@@ -189,7 +190,6 @@
             margin-left: 18px;
         }
 
-        /* Mobile Touch Controls Overlay */
         .touch-controls {
             position: absolute;
             top: 0;
@@ -261,9 +261,7 @@
             <div class="menu-title" id="pauseTitle">GAME PAUSED</div>
             <div class="instruction-box">
                 <strong>CONTROLS:</strong>
-                <ul id="pauseControlDetails">
-                    <!-- Dynamic details load here -->
-                </ul>
+                <ul id="pauseControlDetails"></ul>
                 <br>
                 <strong>GAME RULES:</strong>
                 <ul>
@@ -280,12 +278,10 @@
         
         <!-- On-Screen Touch Controls -->
         <div id="touchControls" class="touch-controls hidden">
-            <!-- Left Paddle Controls -->
             <div class="touch-side" id="leftTouchSide">
                 <div class="touch-btn" id="btnLeftUp">▲ UP</div>
                 <div class="touch-btn" id="btnLeftDown">▼ DN</div>
             </div>
-            <!-- Right Paddle Controls (Multiplayer) -->
             <div class="touch-side" id="rightTouchSide">
                 <div class="touch-btn" id="btnRightUp">▲ UP</div>
                 <div class="touch-btn" id="btnRightDown">▼ DN</div>
@@ -355,6 +351,26 @@
             }
         }
 
+        function playSliceSound() {
+            if (!soundEnabled) return;
+            ensureAudioUnlocked();
+            if (!audioCtx) return;
+            try {
+                // High frequency drop for sword slice sound
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "sawtooth";
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
         function playPaddleHitSound() { playSound(480, 0.08); }
         function playWallHitSound() { playSound(240, 0.06); }
         function playScoreSound() {
@@ -370,11 +386,10 @@
             const text = soundEnabled ? "SOUND: ON" : "SOUND: OFF";
             soundToggle.innerText = text;
             pauseSoundBtn.innerText = text;
-
             if (soundEnabled) playSound(520, 0.08);
         }
 
-        // Input Mode Management (Desktop vs Mobile Touch)
+        // Input Mode Management
         let isMobileInput = false;
 
         function detectTouchDevice() {
@@ -389,9 +404,7 @@
             updateControlsDisplay();
         }
 
-        function toggleInputMode() {
-            setInputMode(!isMobileInput);
-        }
+        function toggleInputMode() { setInputMode(!isMobileInput); }
 
         // Retro Theme Management
         let currentTheme = "green";
@@ -447,8 +460,17 @@
             radius: ballRadius,
             speed: initialBallSpeed,
             velocityX: initialBallSpeed,
-            velocityY: initialBallSpeed
+            velocityY: initialBallSpeed,
+            sliced: false
         };
+
+        // Ninja Samurai Animation State
+        let samuraiAnimation = null;
+        let slicedBallHalves = [];
+
+        // Secret Typing Detection ("ninja sam")
+        let typedBuffer = "";
+        const secretCode = "ninjasam";
 
         // Controls State Tracker
         const inputs = {
@@ -458,7 +480,7 @@
             rightDown: false
         };
 
-        // Keyboard Event Listeners
+        // Key Press Listener
         window.addEventListener("keydown", (event) => {
             if (event.key === "w" || event.key === "W") inputs.leftUp = true;
             if (event.key === "s" || event.key === "S") inputs.leftDown = true;
@@ -473,6 +495,17 @@
                 resetToMenu();
             }
 
+            // Secret Code Detection
+            if (event.key.length === 1 && gameRunning && !isPaused) {
+                typedBuffer += event.key.toLowerCase();
+                if (typedBuffer.length > 20) typedBuffer = typedBuffer.slice(-20);
+
+                if (typedBuffer.replace(/\s+/g, '').includes(secretCode)) {
+                    triggerNinjaSamurai();
+                    typedBuffer = "";
+                }
+            }
+
             if (["ArrowUp", "ArrowDown", "w", "s", "W", "S", " "].includes(event.key)) {
                 event.preventDefault();
             }
@@ -485,23 +518,51 @@
             if (event.key === "ArrowDown") inputs.rightDown = false;
         });
 
+        function triggerNinjaSamurai() {
+            if (samuraiAnimation || ball.sliced) return;
+
+            ball.sliced = true;
+            playSliceSound();
+
+            // Create Samurai Dash Animation
+            samuraiAnimation = {
+                x: -50,
+                y: ball.y,
+                targetX: canvas.width + 50,
+                progress: 0,
+                slashAlpha: 1.0
+            };
+
+            // Split the ball into 2 separate flying halves
+            slicedBallHalves = [
+                { x: ball.x, y: ball.y - 2, vx: -3, vy: -6, angle: 0 },
+                { x: ball.x, y: ball.y + 2, vx: 3, vy: 6, angle: 0 }
+            ];
+
+            // Award 1 point to Player 1
+            playerScore++;
+            instructions.innerHTML = "★ NINJA SAMURAI SLICED THE BALL! +1 POINT TO P1 ★";
+
+            setTimeout(() => {
+                resetBall();
+                if (gameRunning) updateControlsDisplay();
+            }, 1200);
+        }
+
         // Mobile Touch Button Setup
         function setupTouchButton(elementId, inputKey) {
             const btn = document.getElementById(elementId);
-            
             const startHandler = (e) => {
                 e.preventDefault();
                 ensureAudioUnlocked();
                 inputs[inputKey] = true;
                 btn.classList.add("active");
             };
-
             const endHandler = (e) => {
                 e.preventDefault();
                 inputs[inputKey] = false;
                 btn.classList.remove("active");
             };
-
             btn.addEventListener("touchstart", startHandler, { passive: false });
             btn.addEventListener("touchend", endHandler, { passive: false });
             btn.addEventListener("mousedown", startHandler);
@@ -521,7 +582,7 @@
                 touchControls.classList.remove("hidden");
                 if (gameMode === 1) {
                     rightTouchSide.classList.add("hidden");
-                    instructions.innerHTML = "Left Controls: Touch Screen Buttons &nbsp;|&nbsp; Right: Computer AI";
+                    instructions.innerHTML = "Left Controls: Touch Screen Buttons &nbsp;|&nbsp; Right: AI Bot";
                     pauseControlDetails.innerHTML = `
                         <li><strong>Input Mode:</strong> Mobile Touch Overlay</li>
                         <li><strong>Left Player:</strong> Use Left ▲/▼ Screen Buttons</li>
@@ -539,11 +600,12 @@
             } else {
                 touchControls.classList.add("hidden");
                 if (gameMode === 1) {
-                    instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: AI Bot";
+                    instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: AI Bot (Type 'ninja sam' for secret)";
                     pauseControlDetails.innerHTML = `
                         <li><strong>Input Mode:</strong> Desktop Keyboard</li>
                         <li><strong>Left Player:</strong> Press 'W' (Up) and 'S' (Down)</li>
                         <li><strong>Right Player:</strong> Controlled by Computer AI</li>
+                        <li><strong>Secret:</strong> Type 'ninja sam' during gameplay!</li>
                     `;
                 } else {
                     instructions.innerHTML = "Left Paddle: W / S Keys &nbsp;|&nbsp; Right Paddle: UP / DOWN Arrows";
@@ -594,6 +656,8 @@
         function resetToMenu() {
             gameRunning = false;
             isPaused = false;
+            samuraiAnimation = null;
+            slicedBallHalves = [];
             pauseMenu.classList.add("hidden");
             touchControls.classList.add("hidden");
             menu.classList.remove("hidden");
@@ -607,6 +671,8 @@
             ball.speed = initialBallSpeed;
             ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
             ball.velocityY = (Math.random() > 0.5 ? 1 : -1) * initialBallSpeed;
+            ball.sliced = false;
+            slicedBallHalves = [];
         }
 
         function collision(b, p) {
@@ -647,14 +713,70 @@
             ctx.fillText(text, x, y);
         }
 
+        function drawSamuraiAndSlash(colors) {
+            if (!samuraiAnimation) return;
+
+            samuraiAnimation.progress += 0.08;
+            const samX = -50 + (canvas.width + 100) * samuraiAnimation.progress;
+
+            // Draw Sword Slash Line across canvas
+            ctx.strokeStyle = "#ffffff";
+            ctx.shadowColor = colors.fg;
+            ctx.shadowBlur = 15;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, ball.y - 40);
+            ctx.lineTo(canvas.width, ball.y + 40);
+            ctx.stroke();
+
+            // Draw Pixel Samurai Figure
+            ctx.fillStyle = colors.fg;
+            ctx.shadowColor = colors.fg;
+            ctx.shadowBlur = 10;
+
+            // Head & Ninja Bandana
+            ctx.fillRect(samX - 10, ball.y - 25, 20, 15);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(samX - 12, ball.y - 22, 24, 4); // Bandana ribbon
+
+            // Body
+            ctx.fillStyle = colors.fg;
+            ctx.fillRect(samX - 12, ball.y - 10, 24, 25);
+
+            // Katana Blade
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(samX + 10, ball.y - 18, 30, 4);
+
+            if (samuraiAnimation.progress >= 1) {
+                samuraiAnimation = null;
+            }
+        }
+
+        function drawSlicedBallHalves(colors) {
+            if (slicedBallHalves.length === 0) return;
+
+            slicedBallHalves.forEach(half => {
+                half.x += half.vx;
+                half.y += half.vy;
+
+                ctx.fillStyle = colors.fg;
+                ctx.shadowColor = colors.fg;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(half.x, half.y, ball.radius, 0, Math.PI, half.vy > 0);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
         function update() {
             if (!gameRunning || isPaused) return;
 
-            // Left Paddle movement
+            // Left Paddle
             if (inputs.leftUp) playerLeft.y -= playerLeft.speed;
             if (inputs.leftDown) playerLeft.y += playerLeft.speed;
 
-            // Right Paddle movement
+            // Right Paddle
             if (gameMode === 2) {
                 if (inputs.rightUp) playerRight.y -= playerRight.speed;
                 if (inputs.rightDown) playerRight.y += playerRight.speed;
@@ -663,46 +785,48 @@
                 playerRight.y += (aiTarget - playerRight.y) * 0.08; 
             }
 
-            // Screen boundary clamping
+            // Screen boundaries
             if (playerLeft.y < 0) playerLeft.y = 0;
             if (playerLeft.y > canvas.height - playerLeft.height) playerLeft.y = canvas.height - playerLeft.height;
             
             if (playerRight.y < 0) playerRight.y = 0;
             if (playerRight.y > canvas.height - playerRight.height) playerRight.y = canvas.height - playerRight.height;
 
-            ball.x += ball.velocityX;
-            ball.y += ball.velocityY;
+            if (!ball.sliced) {
+                ball.x += ball.velocityX;
+                ball.y += ball.velocityY;
 
-            // Wall Bounce
-            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
-                ball.velocityY = -ball.velocityY;
-                playWallHitSound();
-            }
+                // Wall bounce
+                if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
+                    ball.velocityY = -ball.velocityY;
+                    playWallHitSound();
+                }
 
-            let activePaddle = (ball.x < canvas.width / 2) ? playerLeft : playerRight;
+                let activePaddle = (ball.x < canvas.width / 2) ? playerLeft : playerRight;
 
-            if (collision(ball, activePaddle)) {
-                let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2));
-                collidePoint = collidePoint / (activePaddle.height / 2);
+                if (collision(ball, activePaddle)) {
+                    let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2));
+                    collidePoint = collidePoint / (activePaddle.height / 2);
 
-                let angleRad = (Math.PI / 4) * collidePoint;
-                let direction = (ball.x < canvas.width / 2) ? 1 : -1;
+                    let angleRad = (Math.PI / 4) * collidePoint;
+                    let direction = (ball.x < canvas.width / 2) ? 1 : -1;
 
-                ball.speed += speedIncrement;
-                ball.velocityX = direction * ball.speed * Math.cos(angleRad);
-                ball.velocityY = ball.speed * Math.sin(angleRad);
-                playPaddleHitSound();
-            }
+                    ball.speed += speedIncrement;
+                    ball.velocityX = direction * ball.speed * Math.cos(angleRad);
+                    ball.velocityY = ball.speed * Math.sin(angleRad);
+                    playPaddleHitSound();
+                }
 
-            // Scoring
-            if (ball.x - ball.radius < 0) {
-                aiScore++;
-                playScoreSound();
-                resetBall();
-            } else if (ball.x + ball.radius > canvas.width) {
-                playerScore++;
-                playScoreSound();
-                resetBall();
+                // Scoring
+                if (ball.x - ball.radius < 0) {
+                    aiScore++;
+                    playScoreSound();
+                    resetBall();
+                } else if (ball.x + ball.radius > canvas.width) {
+                    playerScore++;
+                    playScoreSound();
+                    resetBall();
+                }
             }
         }
 
@@ -718,7 +842,14 @@
             drawText(aiScore, 3 * canvas.width / 4 - 35, 80, colors.fg);
             drawRect(playerLeft.x, playerLeft.y, playerLeft.width, playerLeft.height, colors.fg);
             drawRect(playerRight.x, playerRight.y, playerRight.width, playerRight.height, colors.fg);
-            drawCircle(ball.x, ball.y, ball.radius, colors.fg);
+
+            if (!ball.sliced) {
+                drawCircle(ball.x, ball.y, ball.radius, colors.fg);
+            } else {
+                drawSlicedBallHalves(colors);
+            }
+
+            drawSamuraiAndSlash(colors);
         }
 
         function gameLoop() {
@@ -727,11 +858,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Initialize default input mode based on screen size/device type
-        if (detectTouchDevice()) {
-            setInputMode(true);
-        }
-
+        if (detectTouchDevice()) setInputMode(true);
         gameLoop();
     </script>
 </body>
