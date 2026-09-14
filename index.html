@@ -518,7 +518,8 @@
         });
 
         function triggerGoku() {
-            if (gokuSequence || ball.disintegrating) return;
+            // Disable Goku if in 2-Player mode or if already disintegrating
+            if (gameMode !== 1 || gokuSequence || ball.disintegrating) return;
 
             ball.disintegrating = true;
             playKamehamehaSound();
@@ -713,22 +714,22 @@
             ctx.fillText(text, x, y);
         }
 
-        // Draw Goku based on user's pixel reference image
+        // Draw Goku based on pixel reference
         function drawGokuReferencePixelArt(ox, oy) {
-            const p = 3; // Pixel size scale
+            const p = 3; // Pixel scale
             const grid = [
-                // Hair Spikes (Cyan & Dark Outline)
+                // Hair Spikes
                 {x: 10, y: 0, w: 2, h: 4, c: "#1e293b"}, {x: 12, y: 1, w: 4, h: 10, c: "#00bfff"}, {x: 16, y: 2, w: 3, h: 8, c: "#38bdf8"},
                 {x: 6, y: 4, w: 3, h: 12, c: "#1e293b"}, {x: 9, y: 4, w: 10, h: 14, c: "#00bfff"}, {x: 19, y: 5, w: 4, h: 10, c: "#38bdf8"},
                 {x: 3, y: 8, w: 3, h: 8, c: "#1e293b"}, {x: 23, y: 7, w: 3, h: 8, c: "#1e293b"},
 
                 // Face / Skin
-                {x: 11, y: 14, w: 8, h: 6, c: "#fde047"}, {x: 11, y: 14, w: 8, h: 6, c: "#fed7aa"},
+                {x: 11, y: 14, w: 8, h: 6, c: "#fed7aa"},
 
                 // Arms & Charging Hands
                 {x: 5, y: 16, w: 5, h: 4, c: "#ea580c"}, {x: 1, y: 17, w: 4, h: 6, c: "#38bdf8"},
 
-                // Orange Gi Body & Martial Arts Stance Legs
+                // Orange Gi Body & Martial Arts Stance
                 {x: 9, y: 18, w: 8, h: 5, c: "#ea580c"},
                 {x: 4, y: 22, w: 6, h: 6, c: "#ea580c"}, {x: 15, y: 22, w: 6, h: 6, c: "#ea580c"},
                 {x: 1, y: 27, w: 5, h: 4, c: "#1e3a8a"}, {x: 19, y: 27, w: 5, h: 4, c: "#1e3a8a"},
@@ -749,13 +750,12 @@
             const gkX = 35;
             const gkY = Math.max(40, Math.min(canvas.height - 120, gokuSequence.gkY - 50));
 
-            // Draw Custom Pixel Goku Stance
             drawGokuReferencePixelArt(gkX, gkY);
 
             const handX = gkX + 30;
             const handY = gkY + 52;
 
-            // --- PHASE 1: CHARGING KAMEHAMEHA SPHERE ---
+            // --- PHASE 1: CHARGING KAMEHAMEHA ---
             if (gokuSequence.timer < 0.4) {
                 let chargeSize = (gokuSequence.timer / 0.4) * 20;
                 ctx.fillStyle = "#38bdf8";
@@ -769,33 +769,28 @@
                 ctx.arc(handX, handY, chargeSize * 0.5, 0, Math.PI * 2);
                 ctx.fill();
             } 
-            // --- PHASE 2: FIRING BEAM & DISINTEGRATING BALL ---
+            // --- PHASE 2: FIRING BEAM ---
             else {
                 const beamLength = canvas.width - handX;
 
-                // Outer Blue Blast Beam
                 ctx.fillStyle = "#0284c7";
                 ctx.shadowColor = "#38bdf8";
                 ctx.shadowBlur = 25;
                 ctx.fillRect(handX, handY - 20, beamLength, 40);
 
-                // Inner Cyan Beam
                 ctx.fillStyle = "#38bdf8";
                 ctx.fillRect(handX, handY - 12, beamLength, 24);
 
-                // Core White Beam
                 ctx.fillStyle = "#ffffff";
                 ctx.shadowColor = "#ffffff";
                 ctx.shadowBlur = 12;
                 ctx.fillRect(handX, handY - 6, beamLength, 12);
 
-                // Hand Sphere Glow
                 ctx.beginPath();
                 ctx.arc(handX, handY, 24, 0, Math.PI * 2);
                 ctx.fillStyle = "#38bdf8";
                 ctx.fill();
 
-                // Draw Slow Disintegrating Ash & Pixel Fragments from ball
                 ashParticles.forEach(p => {
                     p.x += p.vx;
                     p.y += p.vy;
@@ -827,7 +822,7 @@
                 playerRight.y += (aiTarget - playerRight.y) * 0.08; 
             }
 
-            // Screen boundaries
+            // Boundaries
             if (playerLeft.y < 0) playerLeft.y = 0;
             if (playerLeft.y > canvas.height - playerLeft.height) playerLeft.y = canvas.height - playerLeft.height;
             
@@ -838,7 +833,6 @@
                 ball.x += ball.velocityX;
                 ball.y += ball.velocityY;
 
-                // Wall bounce
                 if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
                     ball.velocityY = -ball.velocityY;
                     playWallHitSound();
@@ -859,7 +853,6 @@
                     playPaddleHitSound();
                 }
 
-                // Scoring
                 if (ball.x - ball.radius < 0) {
                     aiScore++;
                     playScoreSound();
