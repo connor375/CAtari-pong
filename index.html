@@ -232,32 +232,25 @@
             opacity: 1;
         }
 
-        /* Jumpscare Screen Overlay */
+        /* Fullscreen Jumpscare Screen Overlay */
         #jumpscareOverlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: #000;
+            background-color: #0d0a07;
             z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: flashScale 0.1s infinite alternate;
-        }
-
-        #jumpscareOverlay img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            filter: contrast(1.4) brightness(1.1);
+            animation: flashScale 0.08s infinite alternate;
         }
 
         @keyframes flashScale {
-            0% { transform: scale(1.0) rotate(0deg); filter: invert(0); }
-            50% { transform: scale(1.08) rotate(1deg); filter: invert(0.1); }
-            100% { transform: scale(1.03) rotate(-1deg); filter: invert(0); }
+            0% { transform: scale(1.0) rotate(0deg); filter: contrast(1.2); }
+            50% { transform: scale(1.06) rotate(1deg); filter: contrast(1.5) brightness(1.2); }
+            100% { transform: scale(1.02) rotate(-1deg); filter: contrast(1.1); }
         }
 
         .hidden {
@@ -319,17 +312,58 @@
         <canvas id="pongCanvas" width="800" height="500"></canvas>
     </div>
 
-    <!-- Fullscreen Jumpscare Element -->
+    <!-- Stage 3 Verity SVG Overlay -->
     <div id="jumpscareOverlay" class="hidden">
-        <svg id="stage3VeritySvg" viewBox="0 0 400 700" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-            <rect width="400" height="700" fill="#080603"/>
-            <path d="M120,400 Q110,250 140,220 Q150,140 200,40 Q250,140 260,220 Q290,250 280,400 Z" fill="#d6c596" stroke="#4a3e20" stroke-width="4"/>
-            <path d="M175,200 Q200,240 225,200 M170,270 Q200,320 230,270" fill="none" stroke="#5c4d29" stroke-width="5"/>
-            <ellipse cx="175" cy="105" rx="16" ry="22" fill="#050301"/>
-            <ellipse cx="225" cy="105" rx="16" ry="22" fill="#050301"/>
-            <path d="M150,135 Q200,165 250,135 Q275,260 200,380 Q125,260 150,135 Z" fill="#0d0403" stroke="#3b120c" stroke-width="4"/>
-            <path d="M155,145 Q200,168 245,145" fill="none" stroke="#ffffff" stroke-width="4"/>
-            <path d="M140,150 Q200,390 260,150" fill="none" stroke="#e04e38" stroke-width="12"/>
+        <svg viewBox="0 0 500 800" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <!-- Background Wall Texture -->
+            <defs>
+                <linearGradient id="wallBg" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#4a3e2a"/>
+                    <stop offset="50%" stop-color="#2d2518"/>
+                    <stop offset="100%" stop-color="#14100a"/>
+                </linearGradient>
+            </defs>
+            <rect width="500" height="800" fill="url(#wallBg)"/>
+            
+            <!-- Wall Plank Details -->
+            <path d="M0,150 L500,150 M0,300 L500,300 M0,450 L500,450 M0,600 L500,600" stroke="#1c160e" stroke-width="4"/>
+            
+            <!-- Stage 3 Verity Body -->
+            <g id="verityStage3">
+                <!-- Extremely Long Arms -->
+                <path d="M170,360 L110,580 L100,750" fill="none" stroke="#cca662" stroke-width="24" stroke-linecap="round"/>
+                <path d="M170,360 L110,580 L100,750" fill="none" stroke="#7a6032" stroke-width="8" stroke-linecap="round"/>
+
+                <path d="M330,360 L390,580 L400,750" fill="none" stroke="#cca662" stroke-width="24" stroke-linecap="round"/>
+                <path d="M330,360 L390,580 L400,750" fill="none" stroke="#7a6032" stroke-width="8" stroke-linecap="round"/>
+
+                <!-- Slender Torso & Ribcage -->
+                <path d="M200,340 C190,420 205,520 210,640 L290,640 C295,520 310,420 300,340 Z" fill="#bfa05d"/>
+                <!-- Gaunt Rib Shadows -->
+                <path d="M210,380 Q250,420 290,380 M212,420 Q250,460 288,420 M215,460 Q250,500 285,460 M218,500 Q250,530 282,500" fill="none" stroke="#544322" stroke-width="7"/>
+
+                <!-- Neck & Throat -->
+                <path d="M220,180 C215,240 215,300 200,340 L300,340 C285,300 285,240 280,180 Z" fill="#caa767"/>
+                <path d="M235,220 C235,260 230,300 220,340 M265,220 C265,260 270,300 280,340" fill="none" stroke="#755e34" stroke-width="4"/>
+
+                <!-- Head -->
+                <ellipse cx="250" cy="140" rx="65" ry="90" fill="#d9b673"/>
+
+                <!-- Dark Sunken Eyes -->
+                <ellipse cx="215" cy="100" rx="18" ry="20" fill="#080604"/>
+                <ellipse cx="285" cy="100" rx="18" ry="20" fill="#080604"/>
+
+                <!-- Massive Gaping Mouth -->
+                <path d="M195,115 C190,190 200,310 250,310 C300,310 310,190 305,115 Z" fill="#0c0403" stroke="#4a371c" stroke-width="5"/>
+                
+                <!-- Throat Crevasse Interior -->
+                <path d="M210,160 Q250,300 290,160" fill="#2d0a08"/>
+                <ellipse cx="250" cy="250" rx="20" ry="30" fill="#050101"/>
+
+                <!-- Inner Teeth Gums & Striations -->
+                <path d="M196,125 C200,180 205,270 250,295 C295,270 300,180 304,125" fill="none" stroke="#8a2e2b" stroke-width="8"/>
+                <path d="M198,125 Q250,140 302,125" fill="none" stroke="#e0c296" stroke-width="5"/>
+            </g>
         </svg>
     </div>
 
@@ -394,6 +428,30 @@
             }
         }
 
+        // --- Verity Background Theme Melody Loop ---
+        let verityMusicTimer = null;
+        let verityStep = 0;
+
+        function startVeritySong() {
+            stopVeritySong();
+            verityStep = 0;
+            // Play melodic sequence "Hey, it's me... it's Verity"
+            const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23, 329.63, 293.66]; // C4, E4, G4, C5, A4, F4, E4, D4
+            verityMusicTimer = setInterval(() => {
+                if (!soundEnabled || !isVeritySkin) return;
+                let freq = notes[verityStep % notes.length];
+                playSound(freq, 0.22, "sine");
+                verityStep++;
+            }, 300);
+        }
+
+        function stopVeritySong() {
+            if (verityMusicTimer) {
+                clearInterval(verityMusicTimer);
+                verityMusicTimer = null;
+            }
+        }
+
         function playKamehamehaSound() {
             if (!soundEnabled) return;
             ensureAudioUnlocked();
@@ -425,15 +483,15 @@
                 osc1.type = "sawtooth";
                 osc2.type = "square";
 
-                osc1.frequency.setValueAtTime(80, audioCtx.currentTime);
-                osc1.frequency.linearRampToValueAtTime(450, audioCtx.currentTime + 0.1);
-                osc1.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 1.5);
+                osc1.frequency.setValueAtTime(90, audioCtx.currentTime);
+                osc1.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 0.1);
+                osc1.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 1.6);
 
-                osc2.frequency.setValueAtTime(120, audioCtx.currentTime);
-                osc2.frequency.linearRampToValueAtTime(650, audioCtx.currentTime + 0.1);
-                osc2.frequency.linearRampToValueAtTime(90, audioCtx.currentTime + 1.5);
+                osc2.frequency.setValueAtTime(130, audioCtx.currentTime);
+                osc2.frequency.linearRampToValueAtTime(700, audioCtx.currentTime + 0.1);
+                osc2.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 1.6);
 
-                gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.95, audioCtx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1.8);
 
                 osc1.connect(gain);
@@ -600,13 +658,15 @@
         function toggleVeritySkin() {
             isVeritySkin = !isVeritySkin;
             if (isVeritySkin) {
-                instructions.innerHTML = "★ VERITY BALL SKIN ACTIVATED ★";
+                instructions.innerHTML = "♫ HEY, IT'S ME... IT'S VERITY! ♫";
+                startVeritySong();
             } else {
-                instructions.innerHTML = "★ VERITY BALL SKIN DEACTIVATED ★";
+                instructions.innerHTML = "★ VERITY SKIN DEACTIVATED ★";
+                stopVeritySong();
             }
             setTimeout(() => {
                 if (gameRunning) updateControlsDisplay();
-            }, 2000);
+            }, 2500);
         }
 
         function triggerGoku() {
@@ -637,7 +697,7 @@
                 playerScore++;
                 instructions.innerHTML = "★ SSGSS GOKU FIRED KAMEHAMEHA! +1 POINT TO P1 ★";
             } else {
-                instructions.innerHTML = "★ KAMEHAMEHA HAS NO EFFECT ON VERITY! ★";
+                instructions.innerHTML = "★ VERITY TRANSFORMED INTO STAGE THREE! ★";
             }
 
             setTimeout(() => {
@@ -766,6 +826,7 @@
             isPaused = false;
             gokuSequence = null;
             ashParticles = [];
+            stopVeritySong();
             pauseMenu.classList.add("hidden");
             touchControls.classList.add("hidden");
             menu.classList.remove("hidden");
