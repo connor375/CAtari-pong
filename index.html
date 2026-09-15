@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Classic Atari Pong - CAtari Studios</title>
+    <title>Classic Pong - CAtari Studios</title>
     <!-- CAtari Studios Custom Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black' rx='20'/><text x='50%' y='55%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='900' font-size='70'>C</text></svg>">
     <style>
@@ -402,33 +402,35 @@
             }
         }
 
-        // --- Verity Background Theme Song Loop ("Hey, It's Me, It's Verity") ---
+        // --- Synth-Funk Brass Track Loop ---
         let verityMusicTimer = null;
         let verityStep = 0;
 
-        // Sequence corresponding to vocal notes of the "Hey, it's me, it's Verity!" song
+        // Synth-funk melody pitch and rhythm sequence matching beat track
         const veritySongSequence = [
-            { f: 392.00, d: 240 }, // Hey,
-            { f: 392.00, d: 220 }, // it's
-            { f: 440.00, d: 240 }, // me,
-            { f: 392.00, d: 220 }, // it's
-            { f: 523.25, d: 350 }, // Ve-
-            { f: 440.00, d: 240 }, // ri-
-            { f: 392.00, d: 450 }, // ty!
-            { f: 0,      d: 200 }, // (pause)
-            { f: 349.23, d: 240 }, // Ask
-            { f: 392.00, d: 240 }, // me
-            { f: 440.00, d: 240 }, // a-
-            { f: 349.23, d: 240 }, // ny-
-            { f: 329.63, d: 450 }, // thing!
-            { f: 0,      d: 300 }  // (loop rest)
+            { f: 523.25, d: 180, t: "sawtooth" }, // C5
+            { f: 587.33, d: 180, t: "sawtooth" }, // D5
+            { f: 659.25, d: 240, t: "sawtooth" }, // E5
+            { f: 523.25, d: 180, t: "sawtooth" }, // C5
+            { f: 440.00, d: 300, t: "sawtooth" }, // A4
+            { f: 0,      d: 140, t: "sawtooth" }, // Rest
+            { f: 392.00, d: 180, t: "sawtooth" }, // G4
+            { f: 440.00, d: 180, t: "sawtooth" }, // A4
+            { f: 523.25, d: 240, t: "sawtooth" }, // C5
+            { f: 587.33, d: 360, t: "sawtooth" }, // D5
+            { f: 0,      d: 180, t: "sawtooth" }, // Rest
+            { f: 659.25, d: 200, t: "sawtooth" }, // E5
+            { f: 587.33, d: 200, t: "sawtooth" }, // D5
+            { f: 523.25, d: 240, t: "sawtooth" }, // C5
+            { f: 440.00, d: 320, t: "sawtooth" }, // A4
+            { f: 0,      d: 220, t: "sawtooth" }  // Rest
         ];
 
         function playNextVerityNote() {
             if (!soundEnabled || !isVeritySkin) return;
             let note = veritySongSequence[verityStep % veritySongSequence.length];
             if (note.f > 0) {
-                playSound(note.f, (note.d / 1000) * 0.9, "triangle");
+                playSound(note.f, (note.d / 1000) * 0.85, note.t || "sawtooth");
             }
             verityStep++;
             verityMusicTimer = setTimeout(playNextVerityNote, note.d);
@@ -653,7 +655,7 @@
         function toggleVeritySkin() {
             isVeritySkin = !isVeritySkin;
             if (isVeritySkin) {
-                instructions.innerHTML = "♫ HEY, IT'S ME... IT'S VERITY! ♫";
+                instructions.innerHTML = "♫ SYNTH-FUNK MODE ACTIVATED! ♫";
                 startVeritySong();
             } else {
                 instructions.innerHTML = "★ VERITY SKIN DEACTIVATED ★";
