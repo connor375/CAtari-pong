@@ -232,6 +232,34 @@
             opacity: 1;
         }
 
+        /* Jumpscare Screen Overlay */
+        #jumpscareOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: flashScale 0.1s infinite alternate;
+        }
+
+        #jumpscareOverlay img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            filter: contrast(1.4) brightness(1.1);
+        }
+
+        @keyframes flashScale {
+            0% { transform: scale(1.0) rotate(0deg); filter: invert(0); }
+            50% { transform: scale(1.08) rotate(1deg); filter: invert(0.1); }
+            100% { transform: scale(1.03) rotate(-1deg); filter: invert(0); }
+        }
+
         .hidden {
             display: none !important;
         }
@@ -291,6 +319,20 @@
         <canvas id="pongCanvas" width="800" height="500"></canvas>
     </div>
 
+    <!-- Fullscreen Jumpscare Element -->
+    <div id="jumpscareOverlay" class="hidden">
+        <svg id="stage3VeritySvg" viewBox="0 0 400 700" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <rect width="400" height="700" fill="#080603"/>
+            <path d="M120,400 Q110,250 140,220 Q150,140 200,40 Q250,140 260,220 Q290,250 280,400 Z" fill="#d6c596" stroke="#4a3e20" stroke-width="4"/>
+            <path d="M175,200 Q200,240 225,200 M170,270 Q200,320 230,270" fill="none" stroke="#5c4d29" stroke-width="5"/>
+            <ellipse cx="175" cy="105" rx="16" ry="22" fill="#050301"/>
+            <ellipse cx="225" cy="105" rx="16" ry="22" fill="#050301"/>
+            <path d="M150,135 Q200,165 250,135 Q275,260 200,380 Q125,260 150,135 Z" fill="#0d0403" stroke="#3b120c" stroke-width="4"/>
+            <path d="M155,145 Q200,168 245,145" fill="none" stroke="#ffffff" stroke-width="4"/>
+            <path d="M140,150 Q200,390 260,150" fill="none" stroke="#e04e38" stroke-width="12"/>
+        </svg>
+    </div>
+
     <script>
         const canvas = document.getElementById("pongCanvas");
         const ctx = canvas.getContext("2d");
@@ -307,6 +349,7 @@
         const pauseControlDetails = document.getElementById("pauseControlDetails");
         const touchControls = document.getElementById("touchControls");
         const rightTouchSide = document.getElementById("rightTouchSide");
+        const jumpscareOverlay = document.getElementById("jumpscareOverlay");
 
         // Web Audio Setup
         let audioCtx = null;
@@ -370,6 +413,40 @@
             } catch (e) {}
         }
 
+        function playJumpscareSound() {
+            if (!soundEnabled) return;
+            ensureAudioUnlocked();
+            if (!audioCtx) return;
+            try {
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc1.type = "sawtooth";
+                osc2.type = "square";
+
+                osc1.frequency.setValueAtTime(80, audioCtx.currentTime);
+                osc1.frequency.linearRampToValueAtTime(450, audioCtx.currentTime + 0.1);
+                osc1.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 1.5);
+
+                osc2.frequency.setValueAtTime(120, audioCtx.currentTime);
+                osc2.frequency.linearRampToValueAtTime(650, audioCtx.currentTime + 0.1);
+                osc2.frequency.linearRampToValueAtTime(90, audioCtx.currentTime + 1.5);
+
+                gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1.8);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc1.start();
+                osc2.start();
+                osc1.stop(audioCtx.currentTime + 1.8);
+                osc2.stop(audioCtx.currentTime + 1.8);
+            } catch(e){}
+        }
+
         function playPaddleHitSound() { playSound(480, 0.08); }
         function playWallHitSound() { playSound(240, 0.06); }
         function playScoreSound() {
@@ -423,7 +500,7 @@
         // Game Configuration
         const paddleWidth = 10;
         const paddleHeight = 80;
-        const ballRadius = 7;
+        const ballRadius = 14;
         const initialBallSpeed = 5;
         const speedIncrement = 0.5;
 
@@ -433,6 +510,7 @@
         let gameMode = 1;
         let gameRunning = false;
         let isPaused = false;
+        let isVeritySkin = false;
 
         // Left Paddle
         const playerLeft = {
@@ -463,13 +541,12 @@
             disintegrating: false
         };
 
-        // Goku Animation & Disintegration Particles State
+        // Goku & Particles State
         let gokuSequence = null;
         let ashParticles = [];
 
-        // Secret Word Detection ("goku")
+        // Secret Code Buffer
         let typedBuffer = "";
-        const secretCode = "goku";
 
         // Controls State Tracker
         const inputs = {
@@ -494,13 +571,16 @@
                 resetToMenu();
             }
 
-            // Secret Code Detection
+            // Secret Code Detection ("goku" & "verity")
             if (event.key.length === 1 && gameRunning && !isPaused) {
                 typedBuffer += event.key.toLowerCase();
-                if (typedBuffer.length > 10) typedBuffer = typedBuffer.slice(-10);
+                if (typedBuffer.length > 12) typedBuffer = typedBuffer.slice(-12);
 
-                if (typedBuffer.endsWith(secretCode)) {
+                if (typedBuffer.endsWith("goku")) {
                     triggerGoku();
+                    typedBuffer = "";
+                } else if (typedBuffer.endsWith("verity")) {
+                    toggleVeritySkin();
                     typedBuffer = "";
                 }
             }
@@ -517,8 +597,19 @@
             if (event.key === "ArrowDown") inputs.rightDown = false;
         });
 
+        function toggleVeritySkin() {
+            isVeritySkin = !isVeritySkin;
+            if (isVeritySkin) {
+                instructions.innerHTML = "★ VERITY BALL SKIN ACTIVATED ★";
+            } else {
+                instructions.innerHTML = "★ VERITY BALL SKIN DEACTIVATED ★";
+            }
+            setTimeout(() => {
+                if (gameRunning) updateControlsDisplay();
+            }, 2000);
+        }
+
         function triggerGoku() {
-            // Disable Goku if in 2-Player mode or if already disintegrating
             if (gameMode !== 1 || gokuSequence || ball.disintegrating) return;
 
             ball.disintegrating = true;
@@ -530,25 +621,41 @@
             };
 
             ashParticles = [];
-            for (let i = 0; i < 40; i++) {
-                ashParticles.push({
-                    x: ball.x + (Math.random() - 0.5) * 14,
-                    y: ball.y + (Math.random() - 0.5) * 14,
-                    vx: (Math.random() + 0.6) * 3,
-                    vy: (Math.random() - 0.5) * 4,
-                    size: Math.random() * 3 + 1.5,
-                    alpha: 1.0
-                });
+            
+            // If ball is NOT Verity, create disintegration particles
+            if (!isVeritySkin) {
+                for (let i = 0; i < 40; i++) {
+                    ashParticles.push({
+                        x: ball.x + (Math.random() - 0.5) * 14,
+                        y: ball.y + (Math.random() - 0.5) * 14,
+                        vx: (Math.random() + 0.6) * 3,
+                        vy: (Math.random() - 0.5) * 4,
+                        size: Math.random() * 3 + 1.5,
+                        alpha: 1.0
+                    });
+                }
+                playerScore++;
+                instructions.innerHTML = "★ SSGSS GOKU FIRED KAMEHAMEHA! +1 POINT TO P1 ★";
+            } else {
+                instructions.innerHTML = "★ KAMEHAMEHA HAS NO EFFECT ON VERITY! ★";
             }
 
-            playerScore++;
-            instructions.innerHTML = "★ SSGSS GOKU FIRED KAMEHAMEHA! +1 POINT TO P1 ★";
-
             setTimeout(() => {
+                if (isVeritySkin) {
+                    triggerVerityJumpscare();
+                }
                 resetBall();
                 gokuSequence = null;
                 if (gameRunning) updateControlsDisplay();
             }, 2400);
+        }
+
+        function triggerVerityJumpscare() {
+            playJumpscareSound();
+            jumpscareOverlay.classList.remove("hidden");
+            setTimeout(() => {
+                jumpscareOverlay.classList.add("hidden");
+            }, 1800);
         }
 
         // Mobile Touch Button Setup
@@ -700,6 +807,31 @@
             ctx.fill();
         }
 
+        // Draw Verity Smiley Ball Skin
+        function drawVerityBall(x, y, r) {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#facc15";
+            ctx.fillStyle = "#facc15";
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = "#000000";
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(x - r * 0.35, y - r * 0.25, r * 0.22, 0, Math.PI * 2);
+            ctx.arc(x + r * 0.35, y - r * 0.25, r * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Smile
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(x, y + r * 0.05, r * 0.6, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.stroke();
+        }
+
         function drawNet(color) {
             for (let i = 0; i <= canvas.height; i += 30) {
                 drawRect(canvas.width / 2 - 2, i, 4, 15, color);
@@ -714,22 +846,15 @@
             ctx.fillText(text, x, y);
         }
 
-        // Draw Goku based on pixel reference
+        // Draw Goku Pixel Art Stance
         function drawGokuReferencePixelArt(ox, oy) {
-            const p = 3; // Pixel scale
+            const p = 3;
             const grid = [
-                // Hair Spikes
                 {x: 10, y: 0, w: 2, h: 4, c: "#1e293b"}, {x: 12, y: 1, w: 4, h: 10, c: "#00bfff"}, {x: 16, y: 2, w: 3, h: 8, c: "#38bdf8"},
                 {x: 6, y: 4, w: 3, h: 12, c: "#1e293b"}, {x: 9, y: 4, w: 10, h: 14, c: "#00bfff"}, {x: 19, y: 5, w: 4, h: 10, c: "#38bdf8"},
                 {x: 3, y: 8, w: 3, h: 8, c: "#1e293b"}, {x: 23, y: 7, w: 3, h: 8, c: "#1e293b"},
-
-                // Face / Skin
                 {x: 11, y: 14, w: 8, h: 6, c: "#fed7aa"},
-
-                // Arms & Charging Hands
                 {x: 5, y: 16, w: 5, h: 4, c: "#ea580c"}, {x: 1, y: 17, w: 4, h: 6, c: "#38bdf8"},
-
-                // Orange Gi Body & Martial Arts Stance
                 {x: 9, y: 18, w: 8, h: 5, c: "#ea580c"},
                 {x: 4, y: 22, w: 6, h: 6, c: "#ea580c"}, {x: 15, y: 22, w: 6, h: 6, c: "#ea580c"},
                 {x: 1, y: 27, w: 5, h: 4, c: "#1e3a8a"}, {x: 19, y: 27, w: 5, h: 4, c: "#1e3a8a"},
@@ -791,18 +916,23 @@
                 ctx.fillStyle = "#38bdf8";
                 ctx.fill();
 
-                ashParticles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.alpha -= 0.015;
+                if (!isVeritySkin) {
+                    ashParticles.forEach(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.alpha -= 0.015;
 
-                    if (p.alpha > 0) {
-                        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
-                        ctx.shadowColor = "#38bdf8";
-                        ctx.shadowBlur = 10;
-                        ctx.fillRect(p.x, p.y, p.size, p.size);
-                    }
-                });
+                        if (p.alpha > 0) {
+                            ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                            ctx.shadowColor = "#38bdf8";
+                            ctx.shadowBlur = 10;
+                            ctx.fillRect(p.x, p.y, p.size, p.size);
+                        }
+                    });
+                } else {
+                    // Draw Verity withstands the beam
+                    drawVerityBall(ball.x, ball.y, ball.radius);
+                }
             }
         }
 
@@ -879,7 +1009,11 @@
             drawRect(playerRight.x, playerRight.y, playerRight.width, playerRight.height, colors.fg);
 
             if (!ball.disintegrating) {
-                drawCircle(ball.x, ball.y, ball.radius, colors.fg);
+                if (isVeritySkin) {
+                    drawVerityBall(ball.x, ball.y, ball.radius);
+                } else {
+                    drawCircle(ball.x, ball.y, ball.radius, colors.fg);
+                }
             }
 
             drawGokuAndDisintegration();
