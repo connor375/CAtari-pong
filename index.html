@@ -239,7 +239,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: #0d0a07;
+            background-color: #000;
             z-index: 9999;
             display: flex;
             align-items: center;
@@ -312,57 +312,31 @@
         <canvas id="pongCanvas" width="800" height="500"></canvas>
     </div>
 
-    <!-- Stage 3 Verity SVG Overlay -->
+    <!-- Verity Smiley Jumpscare Overlay -->
     <div id="jumpscareOverlay" class="hidden">
-        <svg viewBox="0 0 500 800" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-            <!-- Background Wall Texture -->
-            <defs>
-                <linearGradient id="wallBg" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#4a3e2a"/>
-                    <stop offset="50%" stop-color="#2d2518"/>
-                    <stop offset="100%" stop-color="#14100a"/>
-                </linearGradient>
-            </defs>
-            <rect width="500" height="800" fill="url(#wallBg)"/>
-            
-            <!-- Wall Plank Details -->
-            <path d="M0,150 L500,150 M0,300 L500,300 M0,450 L500,450 M0,600 L500,600" stroke="#1c160e" stroke-width="4"/>
-            
-            <!-- Stage 3 Verity Body -->
-            <g id="verityStage3">
-                <!-- Extremely Long Arms -->
-                <path d="M170,360 L110,580 L100,750" fill="none" stroke="#cca662" stroke-width="24" stroke-linecap="round"/>
-                <path d="M170,360 L110,580 L100,750" fill="none" stroke="#7a6032" stroke-width="8" stroke-linecap="round"/>
-
-                <path d="M330,360 L390,580 L400,750" fill="none" stroke="#cca662" stroke-width="24" stroke-linecap="round"/>
-                <path d="M330,360 L390,580 L400,750" fill="none" stroke="#7a6032" stroke-width="8" stroke-linecap="round"/>
-
-                <!-- Slender Torso & Ribcage -->
-                <path d="M200,340 C190,420 205,520 210,640 L290,640 C295,520 310,420 300,340 Z" fill="#bfa05d"/>
-                <!-- Gaunt Rib Shadows -->
-                <path d="M210,380 Q250,420 290,380 M212,420 Q250,460 288,420 M215,460 Q250,500 285,460 M218,500 Q250,530 282,500" fill="none" stroke="#544322" stroke-width="7"/>
-
-                <!-- Neck & Throat -->
-                <path d="M220,180 C215,240 215,300 200,340 L300,340 C285,300 285,240 280,180 Z" fill="#caa767"/>
-                <path d="M235,220 C235,260 230,300 220,340 M265,220 C265,260 270,300 280,340" fill="none" stroke="#755e34" stroke-width="4"/>
-
-                <!-- Head -->
-                <ellipse cx="250" cy="140" rx="65" ry="90" fill="#d9b673"/>
-
-                <!-- Dark Sunken Eyes -->
-                <ellipse cx="215" cy="100" rx="18" ry="20" fill="#080604"/>
-                <ellipse cx="285" cy="100" rx="18" ry="20" fill="#080604"/>
-
-                <!-- Massive Gaping Mouth -->
-                <path d="M195,115 C190,190 200,310 250,310 C300,310 310,190 305,115 Z" fill="#0c0403" stroke="#4a371c" stroke-width="5"/>
+        <svg viewBox="0 0 500 500" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <!-- Bright Yellow Background Face -->
+            <rect width="500" height="500" fill="#facc15"/>
+            <g transform="translate(0, 0)">
+                <!-- Oval Black Eyes -->
+                <ellipse cx="165" cy="180" rx="32" ry="60" fill="#000000"/>
+                <ellipse cx="335" cy="180" rx="32" ry="60" fill="#000000"/>
                 
-                <!-- Throat Crevasse Interior -->
-                <path d="M210,160 Q250,300 290,160" fill="#2d0a08"/>
-                <ellipse cx="250" cy="250" rx="20" ry="30" fill="#050101"/>
+                <!-- Inner Eye Highlights -->
+                <circle cx="170" cy="155" r="5" fill="#ffffff"/>
+                <circle cx="340" cy="155" r="5" fill="#ffffff"/>
 
-                <!-- Inner Teeth Gums & Striations -->
-                <path d="M196,125 C200,180 205,270 250,295 C295,270 300,180 304,125" fill="none" stroke="#8a2e2b" stroke-width="8"/>
-                <path d="M198,125 Q250,140 302,125" fill="none" stroke="#e0c296" stroke-width="5"/>
+                <!-- Giant Wide Teeth Smile -->
+                <!-- Outer Black Mouth Frame -->
+                <path d="M40,230 C70,440 430,440 460,230 C460,230 400,280 250,280 C100,280 40,230 40,230 Z" fill="#000000"/>
+                
+                <!-- Top Row Teeth -->
+                <path d="M 65,240 L 435,240 C 410,295 90,295 65,240 Z" fill="#ffffff" stroke="#000000" stroke-width="6"/>
+                <path d="M 120,240 L 120,285 M 175,240 L 175,293 M 230,240 L 230,295 M 285,240 L 285,294 M 340,240 L 340,288 M 390,240 L 390,275" stroke="#000000" stroke-width="5"/>
+                
+                <!-- Bottom Row Teeth -->
+                <path d="M 75,305 C 130,390 370,390 425,305 Z" fill="#ffffff" stroke="#000000" stroke-width="6"/>
+                <path d="M 130,305 L 130,350 M 185,305 L 185,372 M 245,305 L 245,380 M 305,305 L 305,370 M 365,305 L 365,342" stroke="#000000" stroke-width="5"/>
             </g>
         </svg>
     </div>
@@ -428,26 +402,47 @@
             }
         }
 
-        // --- Verity Background Theme Melody Loop ---
+        // --- Verity Background Theme Song Loop ("Hey, It's Me, It's Verity") ---
         let verityMusicTimer = null;
         let verityStep = 0;
+
+        // Sequence corresponding to vocal notes of the "Hey, it's me, it's Verity!" song
+        const veritySongSequence = [
+            { f: 392.00, d: 240 }, // Hey,
+            { f: 392.00, d: 220 }, // it's
+            { f: 440.00, d: 240 }, // me,
+            { f: 392.00, d: 220 }, // it's
+            { f: 523.25, d: 350 }, // Ve-
+            { f: 440.00, d: 240 }, // ri-
+            { f: 392.00, d: 450 }, // ty!
+            { f: 0,      d: 200 }, // (pause)
+            { f: 349.23, d: 240 }, // Ask
+            { f: 392.00, d: 240 }, // me
+            { f: 440.00, d: 240 }, // a-
+            { f: 349.23, d: 240 }, // ny-
+            { f: 329.63, d: 450 }, // thing!
+            { f: 0,      d: 300 }  // (loop rest)
+        ];
+
+        function playNextVerityNote() {
+            if (!soundEnabled || !isVeritySkin) return;
+            let note = veritySongSequence[verityStep % veritySongSequence.length];
+            if (note.f > 0) {
+                playSound(note.f, (note.d / 1000) * 0.9, "triangle");
+            }
+            verityStep++;
+            verityMusicTimer = setTimeout(playNextVerityNote, note.d);
+        }
 
         function startVeritySong() {
             stopVeritySong();
             verityStep = 0;
-            // Play melodic sequence "Hey, it's me... it's Verity"
-            const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23, 329.63, 293.66]; // C4, E4, G4, C5, A4, F4, E4, D4
-            verityMusicTimer = setInterval(() => {
-                if (!soundEnabled || !isVeritySkin) return;
-                let freq = notes[verityStep % notes.length];
-                playSound(freq, 0.22, "sine");
-                verityStep++;
-            }, 300);
+            playNextVerityNote();
         }
 
         function stopVeritySong() {
             if (verityMusicTimer) {
-                clearInterval(verityMusicTimer);
+                clearTimeout(verityMusicTimer);
                 verityMusicTimer = null;
             }
         }
@@ -483,13 +478,13 @@
                 osc1.type = "sawtooth";
                 osc2.type = "square";
 
-                osc1.frequency.setValueAtTime(90, audioCtx.currentTime);
-                osc1.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 0.1);
-                osc1.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 1.6);
+                osc1.frequency.setValueAtTime(120, audioCtx.currentTime);
+                osc1.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                osc1.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 1.6);
 
-                osc2.frequency.setValueAtTime(130, audioCtx.currentTime);
-                osc2.frequency.linearRampToValueAtTime(700, audioCtx.currentTime + 0.1);
-                osc2.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 1.6);
+                osc2.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc2.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                osc2.frequency.linearRampToValueAtTime(90, audioCtx.currentTime + 1.6);
 
                 gain.gain.setValueAtTime(0.95, audioCtx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1.8);
@@ -682,7 +677,6 @@
 
             ashParticles = [];
             
-            // If ball is NOT Verity, create disintegration particles
             if (!isVeritySkin) {
                 for (let i = 0; i < 40; i++) {
                     ashParticles.push({
@@ -697,7 +691,7 @@
                 playerScore++;
                 instructions.innerHTML = "★ SSGSS GOKU FIRED KAMEHAMEHA! +1 POINT TO P1 ★";
             } else {
-                instructions.innerHTML = "★ VERITY TRANSFORMED INTO STAGE THREE! ★";
+                instructions.innerHTML = "★ VERITY TRANSFORMED! ★";
             }
 
             setTimeout(() => {
@@ -868,7 +862,7 @@
             ctx.fill();
         }
 
-        // Draw Verity Smiley Ball Skin
+        // Draw Verity Wide-Teeth Smiley Ball Skin
         function drawVerityBall(x, y, r) {
             ctx.shadowBlur = 10;
             ctx.shadowColor = "#facc15";
@@ -881,15 +875,22 @@
             ctx.fillStyle = "#000000";
             ctx.shadowBlur = 0;
             ctx.beginPath();
-            ctx.arc(x - r * 0.35, y - r * 0.25, r * 0.22, 0, Math.PI * 2);
-            ctx.arc(x + r * 0.35, y - r * 0.25, r * 0.22, 0, Math.PI * 2);
+            ctx.ellipse(x - r * 0.35, y - r * 0.2, r * 0.18, r * 0.3, 0, 0, Math.PI * 2);
+            ctx.ellipse(x + r * 0.35, y - r * 0.2, r * 0.18, r * 0.3, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Smile
+            // Wide Teeth Mouth Outline
+            ctx.fillStyle = "#ffffff";
             ctx.strokeStyle = "#000000";
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(x, y + r * 0.05, r * 0.6, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.arc(x, y + r * 0.1, r * 0.65, 0.1 * Math.PI, 0.9 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            // Teeth Grid Line
+            ctx.beginPath();
+            ctx.arc(x, y + r * 0.1, r * 0.65, 0.2 * Math.PI, 0.8 * Math.PI);
             ctx.stroke();
         }
 
@@ -941,7 +942,6 @@
             const handX = gkX + 30;
             const handY = gkY + 52;
 
-            // --- PHASE 1: CHARGING KAMEHAMEHA ---
             if (gokuSequence.timer < 0.4) {
                 let chargeSize = (gokuSequence.timer / 0.4) * 20;
                 ctx.fillStyle = "#38bdf8";
@@ -954,9 +954,7 @@
                 ctx.beginPath();
                 ctx.arc(handX, handY, chargeSize * 0.5, 0, Math.PI * 2);
                 ctx.fill();
-            } 
-            // --- PHASE 2: FIRING BEAM ---
-            else {
+            } else {
                 const beamLength = canvas.width - handX;
 
                 ctx.fillStyle = "#0284c7";
@@ -991,7 +989,6 @@
                         }
                     });
                 } else {
-                    // Draw Verity withstands the beam
                     drawVerityBall(ball.x, ball.y, ball.radius);
                 }
             }
@@ -1000,11 +997,9 @@
         function update() {
             if (!gameRunning || isPaused) return;
 
-            // Left Paddle
             if (inputs.leftUp) playerLeft.y -= playerLeft.speed;
             if (inputs.leftDown) playerLeft.y += playerLeft.speed;
 
-            // Right Paddle
             if (gameMode === 2) {
                 if (inputs.rightUp) playerRight.y -= playerRight.speed;
                 if (inputs.rightDown) playerRight.y += playerRight.speed;
@@ -1013,7 +1008,6 @@
                 playerRight.y += (aiTarget - playerRight.y) * 0.08; 
             }
 
-            // Boundaries
             if (playerLeft.y < 0) playerLeft.y = 0;
             if (playerLeft.y > canvas.height - playerLeft.height) playerLeft.y = canvas.height - playerLeft.height;
             
